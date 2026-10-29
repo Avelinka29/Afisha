@@ -1,0 +1,1378 @@
+{
+    "info": {
+        "name": "ProfSkills — Афиша студентов",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "description": "Сессионная аутентификация. Выполняйте вход в начале папки: Postman хранит cookie. API запускается на localhost:8000. Почта через SMTP при настройке .env; тестовый журнал: module_a/storage/mail.log."
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000/api"
+        },
+        {
+            "key": "password",
+            "value": "ProfSkills2026!"
+        },
+        {
+            "key": "event_id",
+            "value": "1"
+        },
+        {
+            "key": "managed_event_id",
+            "value": ""
+        },
+        {
+            "key": "draft_id",
+            "value": "9"
+        },
+        {
+            "key": "notification_id",
+            "value": "1"
+        },
+        {
+            "key": "new_email",
+            "value": ""
+        },
+        {
+            "key": "verify_token",
+            "value": ""
+        },
+        {
+            "key": "reset_token",
+            "value": ""
+        },
+        {
+            "key": "starts_at",
+            "value": ""
+        },
+        {
+            "key": "ends_at",
+            "value": ""
+        },
+        {
+            "key": "clubs_id",
+            "value": ""
+        },
+        {
+            "key": "categories_id",
+            "value": ""
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "if (!pm.collectionVariables.get('new_email')) pm.collectionVariables.set('new_email', 'student-' + Date.now() + '@example.com');",
+                    "if (!pm.collectionVariables.get('starts_at')) pm.collectionVariables.set('starts_at', new Date(Date.now()+7*86400000).toISOString());",
+                    "if (!pm.collectionVariables.get('ends_at')) pm.collectionVariables.set('ends_at', new Date(Date.now()+7*86400000+7200000).toISOString());"
+                ]
+            }
+        }
+    ],
+    "item": [
+        {
+            "name": "1. Гость",
+            "item": [
+                {
+                    "name": "Проверка сервера и БД",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/health",
+                        "description": "Ожидается status=ok и database=connected."
+                    }
+                },
+                {
+                    "name": "Афиша: фильтры и пагинация",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events?page=1&per_page=12&sort=starts_at&upcoming=true",
+                        "description": "Фильтры: category_id, club_id, format, date_from, date_to, q. Уберите upcoming, чтобы увидеть прошедшие события. Ответ: data и meta."
+                    }
+                },
+                {
+                    "name": "Поиск и популярность",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events?q=студент&sort=popularity",
+                        "description": "Популярность — сумма активных регистраций и обеих реакций."
+                    }
+                },
+                {
+                    "name": "Карточка мероприятия",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/{{event_id}}",
+                        "description": "Гостю недоступны черновики (404). Отменённая карточка доступна по прямой ссылке."
+                    }
+                },
+                {
+                    "name": "Комьюнити",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/clubs",
+                        "description": "Справочник для фильтров и формы мероприятия."
+                    }
+                },
+                {
+                    "name": "Категории",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/categories",
+                        "description": "Справочник категорий."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "2. Аккаунт",
+            "item": [
+                {
+                    "name": "Регистрация",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/register",
+                        "description": "Создаёт студента. При SMTP откройте письмо; в тестовом режиме скопируйте token из module_a/storage/mail.log в переменную verify_token.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Новый студент\",\n    \"email\": \"{{new_email}}\",\n    \"password\": \"{{password}}\",\n    \"faculty\": \"Информационные технологии\",\n    \"course\": 2\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Подтверждение email и автовход",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/verify-email",
+                        "description": "Токен одноразовый, действует 24 часа. После подтверждения создаётся сессия. GET-вариант ссылки из письма перенаправляет на клиент.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"token\": \"{{verify_token}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Повторить письмо подтверждения",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/resend-verification",
+                        "description": "Повторная отправка для неподтверждённой почты. Ответ не раскрывает существование аккаунта.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"{{new_email}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Google: состояние настройки",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/google/config",
+                        "description": "Показывает enabled без раскрытия Client Secret."
+                    }
+                },
+                {
+                    "name": "Google: получить URL входа",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/google/url",
+                        "description": "Возвращает ссылку Google и сохраняет state/nonce/PKCE в сессии. Полный вход проходить кнопкой сайта: браузер и Postman имеют разные cookie."
+                    }
+                },
+                {
+                    "name": "Google: защита callback",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/google/callback?state=invalid&code=invalid",
+                        "description": "Ожидается 302 на login?google_error=GOOGLE_INVALID_STATE. Для просмотра отключить автоматические редиректы Postman."
+                    }
+                },
+                {
+                    "name": "Google: данные для завершения",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/google/pending",
+                        "description": "Нужна сессия после подтверждённого входа Google; без неё 401. Секреты и токены не возвращаются."
+                    }
+                },
+                {
+                    "name": "Google: завершить профиль",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/google/complete",
+                        "description": "После реального Google callback заполнить обязательные данные. Без Google-сессии возвращает 401.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Новый студент\",\n    \"faculty\": \"ИТ\",\n    \"course\": 2,\n    \"password\": \"{{password}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Войти: student@example.com",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/login",
+                        "description": "Запустить перед остальными запросами этой папки. Postman сохраняет сессионную cookie автоматически.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"student@example.com\",\n    \"password\": \"{{password}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Запрос восстановления",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/password/forgot",
+                        "description": "Ответ одинаковый для существующего и неизвестного email. Токен из письма положите в reset_token.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"{{new_email}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Новый пароль по токену",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/password/reset",
+                        "description": "Токен действует один час и используется один раз. Старые сессии становятся недействительными.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"token\": \"{{reset_token}}\",\n    \"password\": \"{{password}}\",\n    \"password_confirmation\": \"{{password}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Смена пароля",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/me/password",
+                        "description": "Требуется вход. В реальном сценарии укажите другой новый пароль; здесь тестовый пароль сохраняется.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"current_password\": \"{{password}}\",\n    \"password\": \"{{password}}\",\n    \"password_confirmation\": \"{{password}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Выход",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/logout",
+                        "description": "Уничтожает сессию. Для последующих защищённых запросов снова выполните вход.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "[]",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "3. Студент",
+            "item": [
+                {
+                    "name": "Войти: student@example.com",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/login",
+                        "description": "Запустить перед остальными запросами этой папки. Postman сохраняет сессионную cookie автоматически.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"student@example.com\",\n    \"password\": \"{{password}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Привязать Google к профилю",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/google/url?mode=link",
+                        "description": "Требует действующую сессию студента. Само связывание происходит после согласия в браузере Google."
+                    }
+                },
+                {
+                    "name": "Мой профиль",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/me",
+                        "description": "В ответе роль и список Комьюнити с verified. Это единственный доступный маршрут для заблокированной действующей сессии."
+                    }
+                },
+                {
+                    "name": "Изменить профиль",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/me",
+                        "description": "Можно менять только name, faculty, course, avatar_url. Email и роль менять нельзя.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Студент для проверки\",\n    \"faculty\": \"Информационные технологии\",\n    \"course\": 2,\n    \"avatar_url\": null\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Записаться",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/{{event_id}}/register",
+                        "description": "Выберите опубликованное будущее событие со свободными местами. Повторная запись: 409 ALREADY_REGISTERED.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "[]",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Отменить запись",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/{{event_id}}/register",
+                        "description": "Отмена разрешена только до начала события."
+                    }
+                },
+                {
+                    "name": "Нравится",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/{{event_id}}/reactions",
+                        "description": "Повторная отправка не создаёт дубль. Обе реакции могут существовать одновременно.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"type\": \"like\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Интересно",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/{{event_id}}/reactions",
+                        "description": "Это отдельная реакция, она не регистрирует на мероприятие.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"type\": \"interested\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Снять реакцию",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/{{event_id}}/reactions?type=like",
+                        "description": "Укажите like или interested в query-параметре type."
+                    }
+                },
+                {
+                    "name": "Мои регистрации",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/me/registrations?period=upcoming&page=1&per_page=12",
+                        "description": "Уберите period для всех регистраций. В каждой записи есть карточка event и статус регистрации."
+                    }
+                },
+                {
+                    "name": "Посещённые события",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/me/registrations?period=past",
+                        "description": "Завершённые опубликованные мероприятия с активной регистрацией. Фактическая явка не учитывается."
+                    }
+                },
+                {
+                    "name": "Мои реакции",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/me/reactions?page=1&per_page=12",
+                        "description": "Реакция, дата и карточка мероприятия."
+                    }
+                },
+                {
+                    "name": "Уведомления",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/me/notifications?page=1&per_page=12",
+                        "description": "payload.event_id используется для перехода к мероприятию. Сохраните id уведомления в notification_id."
+                    }
+                },
+                {
+                    "name": "Прочитать уведомление",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/me/notifications/{{notification_id}}/read",
+                        "description": "Разрешено только владельцу уведомления; чужое возвращает 404.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "[]",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Загрузка изображения",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": "{{base_url}}/uploads",
+                        "description": "В Body выберите form-data, добавьте ключ file типа File, выберите PNG/JPEG/WebP до 4 МБ. Удалите вручную заголовок Content-Type: Postman добавит multipart boundary. Полученный data.url используйте как cover_url или avatar_url.",
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "4. Представитель",
+            "item": [
+                {
+                    "name": "Войти: rep1@example.com",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/login",
+                        "description": "Запустить перед остальными запросами этой папки. Postman сохраняет сессионную cookie автоматически.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"rep1@example.com\",\n    \"password\": \"{{password}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Мероприятия моих Комьюнити",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/me/events?page=1&per_page=12",
+                        "description": "Включает черновики. Дополнительный фильтр: status=draft|published|cancelled."
+                    }
+                },
+                {
+                    "name": "Создать черновик",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events",
+                        "description": "Верификация проверяется по club_id. id созданного события автоматически сохраняется в managed_event_id.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"club_id\": 1,\n    \"category_id\": 1,\n    \"title\": \"Турнир студенческих команд\",\n    \"description\": \"Открытый турнир для студентов университета.\",\n    \"starts_at\": \"{{starts_at}}\",\n    \"ends_at\": \"{{ends_at}}\",\n    \"location\": \"Спортивный зал\",\n    \"format\": \"offline\",\n    \"capacity\": 30,\n    \"cover_url\": \"/uploads/cover-1.svg\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) pm.collectionVariables.set('managed_event_id', pm.response.json().data.id);"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Редактировать",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/{{managed_event_id}}",
+                        "description": "club_id и created_by менять нельзя. Смена времени или места уведомляет зарегистрированных.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"title\": \"Открытый турнир команд\",\n    \"location\": \"Спортивный зал, корпус А\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Опубликовать",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/{{managed_event_id}}/publish",
+                        "description": "Публикует черновик без одобрения администратора. Начало должно быть в будущем.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "[]",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Участники",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/{{managed_event_id}}/participants?page=1&per_page=12",
+                        "description": "Имя, специальность, курс, время регистрации, статус. Доступ только верифицированным представителям этого Комьюнити."
+                    }
+                },
+                {
+                    "name": "Экспорт участников",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/{{managed_event_id}}/participants?export=txt",
+                        "description": "Ответ — текстовый файл UTF-8 с табуляцией, а не JSON."
+                    }
+                },
+                {
+                    "name": "Отменить мероприятие",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/{{managed_event_id}}/cancel",
+                        "description": "Причина обязательна. Все зарегистрированные получают уведомление; их статус становится cancelled_by_organizer.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reason\": \"Перенос организационных планов\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Удалить черновик",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/{{draft_id}}",
+                        "description": "В draft_id укажите созданный ненужный черновик. Опубликованные и отменённые события удалять нельзя (403)."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "5. Администратор",
+            "item": [
+                {
+                    "name": "Войти: admin@example.com",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/login",
+                        "description": "Запустить перед остальными запросами этой папки. Postman сохраняет сессионную cookie автоматически.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"{{password}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Пользователи",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/admin/users?page=1&per_page=12",
+                        "description": "Список для блокировки и выбора представителей."
+                    }
+                },
+                {
+                    "name": "Верифицировать представителя",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/admin/clubs/2/representatives/5",
+                        "description": "Привязывает студента id=5 к Комьюнити id=2. Для отзыва отправьте verified=false.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"verified\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Отозвать верификацию",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/admin/clubs/2/representatives/5",
+                        "description": "Права проверяются при каждом запросе, повторный вход не нужен.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"verified\": false\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Блокировка пользователя",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/admin/users/5/block",
+                        "description": "Блокирует действующие сессии на всех API, кроме GET /me. Себя блокировать нельзя.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"blocked\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Снять блокировку",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/admin/users/5/block",
+                        "description": "Возвращает доступ студенту id=5.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"blocked\": false\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Комьюнити: список",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/admin/clubs",
+                        "description": "Административный список справочника."
+                    }
+                },
+                {
+                    "name": "Комьюнити: создать",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/admin/clubs",
+                        "description": "Создаёт запись. id сохранится в clubs_id.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Новая запись\",\n    \"description\": \"Описание сообщества\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) pm.collectionVariables.set('clubs_id', pm.response.json().data.id);"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Комьюнити: изменить",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/admin/clubs/{{clubs_id}}",
+                        "description": "Изменяет запись из предыдущего запроса.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Обновлённая запись\",\n    \"description\": \"Описание сообщества\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Комьюнити: удалить",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/admin/clubs/{{clubs_id}}",
+                        "description": "Удаление используемого справочника запрещено: 409 IN_USE."
+                    }
+                },
+                {
+                    "name": "Категории: список",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/admin/categories",
+                        "description": "Административный список справочника."
+                    }
+                },
+                {
+                    "name": "Категории: создать",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/admin/categories",
+                        "description": "Создаёт запись. id сохранится в categories_id.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Новая запись\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) pm.collectionVariables.set('categories_id', pm.response.json().data.id);"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Категории: изменить",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/admin/categories/{{categories_id}}",
+                        "description": "Изменяет запись из предыдущего запроса.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Обновлённая запись\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Категории: удалить",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/admin/categories/{{categories_id}}",
+                        "description": "Удаление используемого справочника запрещено: 409 IN_USE."
+                    }
+                },
+                {
+                    "name": "Модерация мероприятия",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/admin/events/{{event_id}}/cancel",
+                        "description": "Отменяет мероприятие любого Комьюнити. Выполняйте только если хотите отменить тестовое событие.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reason\": \"Модерация: нарушение правил\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "6. Проверка ограничений",
+            "item": [
+                {
+                    "name": "Войти: student@example.com",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/login",
+                        "description": "Запустить перед остальными запросами этой папки. Postman сохраняет сессионную cookie автоматически.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"student@example.com\",\n    \"password\": \"{{password}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Студент не создаёт события",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events",
+                        "description": "Ожидается 403 FORBIDDEN.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"club_id\": 1\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Скрытый черновик",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/9",
+                        "description": "Ожидается 404 NOT_FOUND для обычного студента."
+                    }
+                },
+                {
+                    "name": "Нет мест",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/3/register",
+                        "description": "Ожидается 409 EVENT_FULL: у концерта заняты оба места.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "[]",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Событие началось",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/4/register",
+                        "description": "Ожидается 409 EVENT_STARTED.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "[]",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Событие отменено",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/events/12/register",
+                        "description": "Ожидается 409 EVENT_CANCELLED.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "[]",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Заблокированный аккаунт",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": "{{base_url}}/auth/login",
+                        "description": "Ожидается 403 USER_BLOCKED.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"blocked@example.com\",\n    \"password\": \"{{password}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}
